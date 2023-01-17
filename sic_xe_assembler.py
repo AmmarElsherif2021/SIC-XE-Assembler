@@ -5,6 +5,7 @@ Created on Tue Jan 10 19:02:02 2023
 @author: ammar
 """
 import pandas as pd
+import re
 #------------------------------------------------------------------------------
 #read json file: A reference file of SIC/XE instructions:
 
@@ -17,7 +18,7 @@ print('------------------------------------------------------------')
 # read txt file of instructions input:      
 
 
-input_set = pd.read_csv("test.txt", sep=".", header=None, names=["atts"], skiprows=0)
+input_set = pd.read_csv("test.txt", sep=".", header=None, names=["atts"], skiprows=0 ,skipinitialspace =True)
 input_set['REF'],input_set['OPCODE'],input_set['OPERAND'] = zip(*input_set['atts'].str.split())
 del input_set['atts']
 
@@ -25,18 +26,53 @@ print("\n","Set of input instructions imported from test.txt","\n")
 print(input_set)
 
 
-#Merge sicxe_insts and input dataframes and add looctr col.
-input_set1= pd.merge(sicxe_inst,input_set,on='OPCODE', how='right', copy='True')
-input_set1['LOCCTR'] = input_set1.apply(lambda row: row.FORMAT, axis = 1)
-for i in range(len(input_set1)):
-   if  input_set1['LOCCTR'][i] in ['1,2']:
-       input_set1['LOCCTR'][i]=int(input_set1['LOCCTR'][i])
-   elif  input_set1['LOCCTR'][i]== 'NaN':
-       input_set1['LOCCTR'][i]=0
-   elif  input_set1['LOCCTR'][i]=='3/4':
-       if input_set1['OPCODE'][i]==
+#Merge sicxe_insts and input dataframes and add looctr col.-------------------------------
+
+
+
+def createLocctr(inst_set,sicxe,firstloc=hex(0)):
+    # Add column of + sign for format 4
+    #trim + sign from opcode to be able to merge successfully 
+    inst_set['+'] = inst_set.apply(lambda row:bool(re.findall('[+]',row.OPCODE)), axis = 1)
+    inst_set['OPCODE'] = inst_set['OPCODE'].str.replace('+','')
+    
+    
+    
+    #merge the two dataframes
+    inst_set1= pd.merge(sicxe,inst_set,on='OPCODE', how='right', copy='True')
+    inst_set1['LOCCTR'] = inst_set1.apply(lambda row: row.FORMAT, axis = 1)
+    current_loc=firstloc
+    inst_set1['LOCCTR'][0]=current_loc
+    increment=0
+    for i in range(len(inst_set1)):
        
+       if  inst_set1['FORMAT'][i] in ['1','2']:
+           increment=int(inst_set1['FORMAT'][i])
+           
+       elif  inst_set1['FORMAT'][i]=='3/4':
+           increment=3
+           if inst_set1['+'][i]:
+               increment+=1
+       elif inst_set1['FORMAT'][i]=='NaN':
+           if inst_set1['OPCODE'][i]=='RESW':
+               increment=int(inst_set1['OPERAND'][i])*3
+           elif inst_set1['OPCODE'][i]=='RESB':
+               increment=int(inst_set1['OPERAND'][i])
+           elif inst_set1['OPCODE'][i]=='WORD':
+               increment=3
+           elif inst_set1['OPCODE'][i]=='BYTE' | inst_set1['OPCODE'][i]=='BASE' :
+               increment=1
+           
+               
+       
+       current_loc = hex(increment+int(current_loc,16))
+       
+       inst_set1['LOCCTR'][i+1]=int(current_loc,16)
+           
+    return inst_set1
+
 print("\n","Set of input instructions modified","\n")
+input_set1=createLocctr(input_set, sicxe_inst)
 print(input_set1)
 
 
