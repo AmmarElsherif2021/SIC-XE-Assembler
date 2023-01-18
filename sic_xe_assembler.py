@@ -4,6 +4,7 @@ Created on Tue Jan 10 19:02:02 2023
 
 @author: ammar
 """
+import math
 import pandas as pd
 import re
 #------------------------------------------------------------------------------
@@ -25,7 +26,22 @@ del input_set['atts']
 print("\n","Set of input instructions imported from test.txt","\n")
 print(input_set)
 
+#addressing mode :
 
+add_mode= pd.read_table('add_mode.txt',sep='.',skipinitialspace =True ,names=["addMode"],skiprows=0 )
+add_mode['AddMode'],add_mode['FLAGS'],add_mode['Disc']=zip(*add_mode['addMode'].str.split(','))
+del add_mode['addMode']
+del add_mode['Disc']
+name=''
+for i in range(len(add_mode)):
+    if add_mode['AddMode'][i]:
+        name=add_mode['AddMode'][i]
+    else:
+        add_mode['AddMode'][i]=name
+        
+    
+print('add mode table \n',add_mode)
+print(add_mode['FLAGS'][1].split())
 #Merge sicxe_insts and input dataframes and add looctr col.-------------------------------
 
 
@@ -46,22 +62,27 @@ def createLocctr(inst_set,sicxe,firstloc=hex(0)):
     increment=0
     for i in range(len(inst_set1)):
        
+       
        if  inst_set1['FORMAT'][i] in ['1','2']:
            increment=int(inst_set1['FORMAT'][i])
            
        elif  inst_set1['FORMAT'][i]=='3/4':
            increment=3
            if inst_set1['+'][i]:
-               increment+=1
+               increment=4
        elif inst_set1['FORMAT'][i]=='NaN':
            if inst_set1['OPCODE'][i]=='RESW':
-               increment=int(inst_set1['OPERAND'][i])*3
+               increment= 3*int(inst_set1['OPERAND'][i])
+               
            elif inst_set1['OPCODE'][i]=='RESB':
                increment=int(inst_set1['OPERAND'][i])
+               
            elif inst_set1['OPCODE'][i]=='WORD':
                increment=3
-           elif inst_set1['OPCODE'][i]=='BYTE' | inst_set1['OPCODE'][i]=='BASE' :
+           elif inst_set1['OPCODE'][i]=='BYTE' :
                increment=1
+           elif inst_set1['OPCODE'][i]=='BASE':
+               increment=0
            
                
        
@@ -78,44 +99,6 @@ print(input_set1)
 
 print('------------------------------------------------------------') 
                
-""" 
-#function to fill locctr
-def fill_locctr(df,first_loc=hex(0)):
-    
-    #df2['locctr'][0]=first_loc
-    current_loc=first_loc
-    for i in range(len(df2)):
-        if df2['FORMAT_x'][i]=='NaN':
-            if df2['OPCODE'][i]=='WORD':
-                current_loc=hex(int(current_loc,16)+3)
-            elif df2['OPCODE'][i]=='BYTE':
-                current_loc=hex(int(current_loc,16)+1)
-            elif df2['OPCODE'][i]=='RESW':
-                current_loc=hex(int(current_loc,16)+(3*int(df2['ref'][i])))
-            elif df2['OPCODE'][i]=='RESB':
-                current_loc=hex(int(current_loc,16)+int(df2['ref'][i]))
-            
-            
-        if df2['FORMAT_x'][i] in ['1','2']:
-            current_loc=hex(int(current_loc,16)+(int(df2['FORMAT_x'][i])))
-        elif df2['FORMAT_x'][i]=='3/4' and df2['plus'][i]=='1':
-            current_loc=hex(int(current_loc,16)+4)
-        else:
-            current_loc=hex(int(current_loc,16)+3)
-        df2['locctr'][i]=current_loc
-        
-    return df2
-   
-print('\n')
-print('filling location counter column--------------------------> \n',fill_locctr(inst_set,hex(0)))
-#--------------------------------------------------------------
-#fill symbols table:
-def get_symtab(df):
-    df2=fill_locctr(df,hex(0))
-    return df2[['sym','locctr']]
-
-print('\n')        
-print('Filling the symbols table up ---------------------------->\n',get_symtab(inst_set))
-
 print('\n*************************************** END OF SIC/XE ASSEMBLER PASS 1 ****************************************')
-"""
+ #PASS 2........................................................................................
+ 

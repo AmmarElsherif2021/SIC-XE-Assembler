@@ -1,0 +1,18 @@
+
+Direct      ,1 1 0 0 0 0,   12 bit displacement is target address
+            ,1 1 0 0 0 1,   20 bit address is target address
+            ,1 1 0 0 1 0,   12 bit 2's complement displacement from PC (PC relative)
+            ,1 1 0 1 0 0,   12 bit base unsigned displacement forward from B (base displacement)
+            ,1 1 1 0 0 0,   index register X added to direct address to get target address
+            ,1 1 1 0 0 1,   index register X added to direct address to get target address
+            ,1 1 1 0 1 0,   index register X added to PC relative computation to get target address
+            ,1 1 1 1 0 0,   index register X added to base displacement computation to get target address
+            
+Indirect    ,1 0 0 0 0 0,   Computed memory address contains the target address
+            ,1 0 0 0 0 1,   Computed memory address contains the target address
+            ,1 0 0 0 1 0,   Computed memory address contains the target address
+            ,1 0 0 1 0 0,   Computed memory address contains the target address
+Immediate   ,0 1 0 0 0 0,   Computed memory address is the operand (target address is the instruction)
+            ,0 1 0 0 0 1,   Computed memory address is the operand (target address is the instruction)
+            ,0 1 0 0 1 0,   Computed memory address is the operand (target address is the instruction)
+            ,0 1 0 1 0 0,   Computed memory address is the operand (target address is the instruction)
