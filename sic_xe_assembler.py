@@ -40,7 +40,7 @@ for i in range(len(add_mode)):
         add_mode['AddMode'][i]=name
         
     
-print('add mode table \n',add_mode)
+print('\n add mode table \n',add_mode)
 print(add_mode['FLAGS'][1].split())
 #Merge sicxe_insts and input dataframes and add looctr col.-------------------------------
 
@@ -95,10 +95,17 @@ def createLocctr(inst_set,sicxe,firstloc=hex(0)):
 print("\n","Set of input instructions modified","\n")
 input_set1=createLocctr(input_set, sicxe_inst)
 print(input_set1)
-
-
 print('------------------------------------------------------------') 
-               
+
+print('Get sym-table\n')
+def get_symtab(inst_set):
+    df=pd.DataFrame()
+    df=inst_set[['REF','LOCCTR']]
+    return df
+    
+      
+print(get_symtab(input_set1)) 
+          
 print('\n*************************************** END OF SIC/XE ASSEMBLER PASS 1 ****************************************')
  #PASS 2........................................................................................
  
