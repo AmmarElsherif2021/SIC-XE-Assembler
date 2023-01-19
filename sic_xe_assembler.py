@@ -120,25 +120,58 @@ for i in range(len(add_mode)):
         add_mode['AddMode'][i]=name
 #.......................................................................................        
 def fill_nixpbe(inst_set):
+    #for format 1,2 
+    inst_set['DISP1']=inst_set.apply(lambda row: row.e*0, axis = 1)
+    inst_set['DISP2']=inst_set.apply(lambda row: row.e*0, axis = 1)
+    inst_set['ADD']=inst_set.apply(lambda row: row.e*0, axis = 1)
+    
+    
+    #handle format 3 and 4:
     operand_switcher={
-        '@':['n'],
-        '#':['i'],
-        'X':['x'],
-        'BASE':['b'],
-        'PC':['p']
+        '@':'n',
+        '#':'i',
+        'X':'x',
         }
-    format_switcher={
-       '4':['e']
-       } 
-    #nixpbe=int(0,2)
+    
+    
+    
     for i in range(len(inst_set)):
-        
+       
+        #is + found ? then e=1
+        if inst_set['signal'][i]:
+            inst_set['e'][i]=1
+       
+        #adjust nixpbe for flags
         for sign in operand_switcher:
-            if operand_switcher.get(re.search(sign,inst_set['OPERAND'][i])):
-                print(inst_set[operand_switcher[sign][0]])
-                inst_set[operand_switcher[sign][0]][i]=1
+            s=operand_switcher[sign]
+            if inst_set['FORMAT'][i] in [3,4]:
+           
+                #handle n,i,x
+                if re.search(sign,str(inst_set['OPERAND'][i])):
+                    inst_set[s][i]=1
+                    inst_set['OPERAND'][i]=inst_set['OPERAND'][i].replace(sign,'').replace(',','')
             
+            #handle p,b ???  
+            #fill address for formats 3/4:
+                inst_set['ADD'][i]=get_symtab(inst_set)['LOCCTR'][i]
+        #handle simple mode
+        if inst_set['n'][i]==0 and inst_set['i'][i]==0 and inst_set['FORMAT'][i] in [3,4]:
+            inst_set['n'][i]=1
+            inst_set['i'][i]=1
         
+            
+            
+        # handle format 2 and 1  and fill displacement columns:
+        if inst_set['FORMAT'][i]==2:
+            
+            for operand in inst_set['OPERAND'].split(','):
+                format_row=inst_set.loc(inst_set['REF']==operand)
+                inst_set['DISP1']=format_row[0]
+                if format_row[1]:
+                    inst_set['DISP2']=format_row[1]
+        
+        
+
     return inst_set
 
 
@@ -152,8 +185,8 @@ print('------------------------------------------------------------')
 
 print("\n","Set of input instructions modified","\n")
 input_set1=createLocctr(input_set, sicxe_inst)
-print(input_set1)
+
 print(fill_nixpbe(input_set1))
-fill_nixpbe(input_set1)
+
 print('Get sym-table\n')
 print(get_symtab(input_set1)) 
