@@ -42,28 +42,35 @@ def createLocctr(inst_set,sicxe,firstloc=hex(0)):
     
     #merge the two dataframes
     inst_set1= pd.merge(sicxe,inst_set,on='OPCODE', how='right', copy='True')
+    #add LOCCTR col.
     inst_set1['LOCCTR'] = inst_set1.apply(lambda row: row.FORMAT, axis = 1)
     current_loc=firstloc
     inst_set1['LOCCTR'][0]=current_loc
-    increment=0
+    
     for i in range(len(inst_set1)):
+    #assure type of data =string
        inst_set1['OPCODEVAL'][i]=str(inst_set1['OPCODEVAL'][i])
        inst_set1['OPERAND'][i]=str(inst_set1['OPERAND'][i])
+       increment=0
        if inst_set1['OPCODEVAL'][i]!='nan' :
            inst_set1['OPCODEVAL'][i]=hex(int(inst_set1['OPCODEVAL'][i],16))
        
            
        if  inst_set1['FORMAT'][i] in ['1','2']:
-           increment=int(inst_set1['FORMAT'][i])          
+           increment=int(inst_set1['FORMAT'][i])
+           inst_set1['FORMAT'][i]=increment
+           
        elif  inst_set1['FORMAT'][i]=='3/4':
            increment=3
+           inst_set1['FORMAT'][i]=increment
            if inst_set1['signal'][i]:
                increment=4
+               inst_set1['FORMAT'][i]=increment
        elif inst_set1['FORMAT'][i]=='NaN':
            if inst_set1['OPCODE'][i]=='RESW':
-               increment= 3* int(inst_set1['OPERAND'][i],10)           
+               increment= 3* int(str(inst_set1['OPERAND'][i]),10)           
            elif inst_set1['OPCODE'][i]=='RESB':
-               increment=int(inst_set1['OPERAND'][i],10)
+               increment=int(str(inst_set1['OPERAND'][i]),10)
            elif inst_set1['OPCODE'][i]=='WORD':
                increment=3
            elif inst_set1['OPCODE'][i]=='BYTE' :
@@ -72,6 +79,10 @@ def createLocctr(inst_set,sicxe,firstloc=hex(0)):
                increment=0
     
        current_loc = hex(increment+int(current_loc,16))
+       
+       
+       
+           
        inst_set1['LOCCTR'][i+1]=int(current_loc,16)
     
     for n in ['P', 'X', 'F', 'C']:
@@ -108,7 +119,22 @@ for i in range(len(add_mode)):
     else:
         add_mode['AddMode'][i]=name
 #.......................................................................................        
-    
+def fill_nixpbe(inst_set):
+    operand_switcher={
+        '@':['n'],
+        '#':['i'],
+        'X':['x'],
+        'BASE':['b'],
+        'PC':['p']
+        }
+    format_switcer={
+       '4':['e']
+       } 
+    nixpbe=int(0,2)
+    for i in range(len(inst_set)):
+        
+        pass
+#.......................................................................................   
 print('\n add mode table \n',add_mode)
 print(add_mode['FLAGS'][1].split())
 
