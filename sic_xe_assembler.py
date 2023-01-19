@@ -127,13 +127,21 @@ def fill_nixpbe(inst_set):
         'BASE':['b'],
         'PC':['p']
         }
-    format_switcer={
+    format_switcher={
        '4':['e']
        } 
-    nixpbe=int(0,2)
+    #nixpbe=int(0,2)
     for i in range(len(inst_set)):
         
-        pass
+        for sign in operand_switcher:
+            if operand_switcher.get(re.search(sign,inst_set['OPERAND'][i])):
+                print(inst_set[operand_switcher[sign][0]])
+                inst_set[operand_switcher[sign][0]][i]=1
+            
+        
+    return inst_set
+
+
 #.......................................................................................   
 print('\n add mode table \n',add_mode)
 print(add_mode['FLAGS'][1].split())
@@ -145,6 +153,7 @@ print('------------------------------------------------------------')
 print("\n","Set of input instructions modified","\n")
 input_set1=createLocctr(input_set, sicxe_inst)
 print(input_set1)
-
+print(fill_nixpbe(input_set1))
+fill_nixpbe(input_set1)
 print('Get sym-table\n')
 print(get_symtab(input_set1)) 
