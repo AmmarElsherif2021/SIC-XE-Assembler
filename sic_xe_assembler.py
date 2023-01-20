@@ -42,10 +42,14 @@ def createLocctr(inst_set,sicxe,firstloc=hex(0)):
     
     #merge the two dataframes
     inst_set1= pd.merge(sicxe,inst_set,on='OPCODE', how='right', copy='True')
+    
     #add LOCCTR col.
     inst_set1['LOCCTR'] = inst_set1.apply(lambda row: row.FORMAT, axis = 1)
     current_loc=firstloc
     inst_set1['LOCCTR'][0]=current_loc
+    inst_set1=inst_set1.fillna(0)
+ 
+    
     
     for i in range(len(inst_set1)):
     #assure type of data =string
@@ -66,11 +70,13 @@ def createLocctr(inst_set,sicxe,firstloc=hex(0)):
            if inst_set1['signal'][i]:
                increment=4
                inst_set1['FORMAT'][i]=increment
-       elif inst_set1['FORMAT'][i]=='NaN':
+       elif inst_set1['FORMAT'][i]==0:
            if inst_set1['OPCODE'][i]=='RESW':
-               increment= 3* int(str(inst_set1['OPERAND'][i]),10)           
+               increment= 3* int(inst_set1['OPERAND'][i]) 
+               
            elif inst_set1['OPCODE'][i]=='RESB':
-               increment=int(str(inst_set1['OPERAND'][i]),10)
+               increment=int(inst_set1['OPERAND'][i])
+               
            elif inst_set1['OPCODE'][i]=='WORD':
                increment=3
            elif inst_set1['OPCODE'][i]=='BYTE' :
@@ -80,16 +86,21 @@ def createLocctr(inst_set,sicxe,firstloc=hex(0)):
     
        current_loc = hex(increment+int(current_loc,16))
        
-       
-       
+
            
        inst_set1['LOCCTR'][i+1]=int(current_loc,16)
-    
+    #OPTIONAL FOR THE CASE OF FILE IMPORTED ONLY
     for n in ['P', 'X', 'F', 'C']:
         del inst_set1[n]
+    
+    #Adding nixpbe flags and '+' signal column
     for flag in ['n','i','x','p','b','e']:
         inst_set1[flag]=inst_set1.apply(lambda row: row.signal*0, axis = 1)
     inst_set1=inst_set1[['FORMAT','REF','OPCODE','OPCODEVAL','OPERAND','signal','n','i','x','p','b','e','LOCCTR']]
+    
+    #binary representation:
+       
+    
     return inst_set1
 
 #.................................................................................
@@ -190,3 +201,4 @@ print(fill_nixpbe(input_set1))
 
 print('Get sym-table\n')
 print(get_symtab(input_set1)) 
+#data['column'].apply(lambda element: format(int(element), 'b'))
