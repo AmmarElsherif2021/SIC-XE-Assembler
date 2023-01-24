@@ -193,13 +193,22 @@ def fill_nixpbe(inst_set):
         #fill adds for formmats 3 and 4
         elif inst_set['FORMAT'][i] in [3,4]:
             operand=str(inst_set['OPERAND'][i])
-            if operand in ['null','0']:
+            if operand in ['null']:
                 operand=0
                 inst_set['ADD'][i]=0
+            elif operand.isdigit() :
+                inst_set['ADD'][i]=int(str(operand))
             else:
                 for j in range(len(symtab['REF'])):
                     if symtab['REF'][j] == operand:
                         inst_set['ADD'][i]=symtab['LOCCTR'][j]
+                        """ if inst_set['FORMAT'][i]==4:
+                            inst_set['ADD'][i]=symtab['LOCCTR'][j]
+                            elif inst_set['FORMAT'][i]==3:
+                            inst_set['DISP1'][i]=symtab['LOCCTR'][j]"""
+                            
+                            
+                        
             
             
             
@@ -208,7 +217,8 @@ def fill_nixpbe(inst_set):
            
            
     
-    
+    inst_set['p']=inst_set.apply(lambda row: int(row.ADD<2047 and row.ADD>-2048 and row.FORMAT==3), axis = 1)
+    inst_set['b']=inst_set.apply(lambda row: int(row.ADD<4095 and row.ADD>0 and row.FORMAT==3 and row.p==0), axis = 1)
     #inst_set= inst_set.assign(ADD=lambda x:Ref.iloc[[x.OPERAND],[LOCCTR]])
     return inst_set
 
