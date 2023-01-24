@@ -99,7 +99,8 @@ def createLocctr(inst_set,sicxe,firstloc=hex(0)):
     inst_set1=inst_set1[['FORMAT','REF','OPCODE','OPCODEVAL','OPERAND','signal','n','i','x','p','b','e','LOCCTR']]
     
     #binary representation:
-       
+    #{0:08b}'.format(6)
+           
     
     return inst_set1
 
@@ -136,7 +137,8 @@ def fill_nixpbe(inst_set):
     inst_set['DISP2']=inst_set.apply(lambda row: row.e*0, axis = 1)
     inst_set['ADD']=inst_set.apply(lambda row: row.e*0, axis = 1)
     
-    
+    #call symtab:
+    symtab=get_symtab(inst_set)
     #handle format 3 and 4:
     operand_switcher={
         '@':'n',
@@ -144,8 +146,10 @@ def fill_nixpbe(inst_set):
         'X':'x',
         }
     
+    #ref-tab 
+    Ref=get_symtab(inst_set)
     
-    
+    #iterate on inst_set and fill '+' col, nixpbe cols, and disp/ADD cols 
     for i in range(len(inst_set)):
        
         #is + found ? then e=1
@@ -164,7 +168,12 @@ def fill_nixpbe(inst_set):
             
             #handle p,b ???  
             #fill address for formats 3/4:
-                inst_set['ADD'][i]=get_symtab(inst_set)['LOCCTR'][i]
+        
+        
+                    
+                    
+                
+ 
         #handle simple mode
         if inst_set['n'][i]==0 and inst_set['i'][i]==0 and inst_set['FORMAT'][i] in [3,4]:
             inst_set['n'][i]=1
@@ -181,8 +190,26 @@ def fill_nixpbe(inst_set):
                 if format_row[1]:
                     inst_set['DISP2']=format_row[1]
         
+        #fill adds for formmats 3 and 4
+        elif inst_set['FORMAT'][i] in [3,4]:
+            operand=str(inst_set['OPERAND'][i])
+            if operand in ['null','0']:
+                operand=0
+                inst_set['ADD'][i]=0
+            else:
+                for j in range(len(symtab['REF'])):
+                    if symtab['REF'][j] == operand:
+                        inst_set['ADD'][i]=symtab['LOCCTR'][j]
+            
+            
+            
         
-
+            
+           
+           
+    
+    
+    #inst_set= inst_set.assign(ADD=lambda x:Ref.iloc[[x.OPERAND],[LOCCTR]])
     return inst_set
 
 
@@ -196,9 +223,10 @@ print('------------------------------------------------------------')
 
 print("\n","Set of input instructions modified","\n")
 input_set1=createLocctr(input_set, sicxe_inst)
-
+fill_nixpbe(input_set1)
 print(fill_nixpbe(input_set1))
 
 print('Get sym-table\n')
-print(get_symtab(input_set1)) 
+symtab=get_symtab(input_set1)
+print(symtab) 
 #data['column'].apply(lambda element: format(int(element), 'b'))
