@@ -116,7 +116,7 @@ def get_symtab(inst_set):
           
 print('\n*************************************** END OF SIC/XE ASSEMBLER PASS 1 ****************************************')
  #PASS 2........................................................................................
-#addressing mode :
+#Adding addressing mode :
 
 add_mode= pd.read_table('add_mode.txt',sep='.',skipinitialspace =True ,names=["addMode"],skiprows=0 )
 add_mode['AddMode'],add_mode['FLAGS'],add_mode['Disc']=zip(*add_mode['addMode'].str.split(','))
@@ -131,7 +131,8 @@ for i in range(len(add_mode)):
     else:
         add_mode['AddMode'][i]=name
 #.......................................................................................        
-def fill_nixpbe(inst_set):
+#Filling n,i,x,p,b,e,disp1,disp2,address columns
+def fill_address(inst_set):
     #for format 1,2 
     inst_set['DISP1']=inst_set.apply(lambda row: row.e*0, axis = 1)
     inst_set['DISP2']=inst_set.apply(lambda row: row.e*0, axis = 1)
@@ -146,7 +147,7 @@ def fill_nixpbe(inst_set):
         'X':'x',
         }
     
-    #ref-tab 
+    #referances-table 
     Ref=get_symtab(inst_set)
     
     #iterate on inst_set and fill '+' col, nixpbe cols, and disp/ADD cols 
@@ -202,41 +203,37 @@ def fill_nixpbe(inst_set):
                 for j in range(len(symtab['REF'])):
                     if symtab['REF'][j] == operand:
                         inst_set['ADD'][i]=symtab['LOCCTR'][j]
-                        """ if inst_set['FORMAT'][i]==4:
-                            inst_set['ADD'][i]=symtab['LOCCTR'][j]
-                            elif inst_set['FORMAT'][i]==3:
-                            inst_set['DISP1'][i]=symtab['LOCCTR'][j]"""
-                            
-                            
-                        
-            
-            
-            
-        
-            
-           
-           
+    
+    #handle p,b flags for formats 3 and 4
     
     inst_set['p']=inst_set.apply(lambda row: int(row.ADD<2047 and row.ADD>-2048 and row.FORMAT==3), axis = 1)
     inst_set['b']=inst_set.apply(lambda row: int(row.ADD<4095 and row.ADD>0 and row.FORMAT==3 and row.p==0), axis = 1)
-    #inst_set= inst_set.assign(ADD=lambda x:Ref.iloc[[x.OPERAND],[LOCCTR]])
+   
+    
     return inst_set
 
-
+#.............................................................................................
+def setToBinary(inst_set):
+    inst_set['OPCODEVAL']=inst_set.apply(lambda row: int(row.OPCODEVAL,16), axis = 1)
+    #inst_set['OPCODEVAL']=inst_set.to_numeric(inst_set['OPCODEVAL'])
+    return inst_set
+    
 #.......................................................................................   
 print('\n add mode table \n',add_mode)
 print(add_mode['FLAGS'][1].split())
 
-print('------------------------------------------------------------') 
+print('--------------------------------------------------------------------------------------') 
 
 
 
 print("\n","Set of input instructions modified","\n")
 input_set1=createLocctr(input_set, sicxe_inst)
-fill_nixpbe(input_set1)
-print(fill_nixpbe(input_set1))
+input_set2=fill_address(input_set1)
+print(fill_address(input_set1))
 
 print('Get sym-table\n')
 symtab=get_symtab(input_set1)
-print(symtab) 
+print(symtab)
+print('to numeric data-------------------------------------------') 
+print(setToBinary(input_set2))
 #data['column'].apply(lambda element: format(int(element), 'b'))
