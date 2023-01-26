@@ -32,7 +32,7 @@ del input_set['atts']
 
 
 
-def createLocctr(inst_set,sicxe,firstloc=hex(0)):
+def createLocctr(inst_set,sicxe,firstloc=0):
     # Add column of + sign for format 4
     #trim + sign from opcode to be able to merge successfully 
     inst_set['signal'] = inst_set.apply(lambda row:int(bool(re.findall('[+]',row.OPCODE))), axis = 1)
@@ -84,12 +84,12 @@ def createLocctr(inst_set,sicxe,firstloc=hex(0)):
            elif inst_set1['OPCODE'][i]=='BASE':
                increment=0
     
-       current_loc = hex(increment+int(current_loc,16))
+       current_loc = increment+current_loc
        
 
            
-       inst_set1['LOCCTR'][i+1]=int(current_loc,16)
-    #OPTIONAL FOR THE CASE OF FILE IMPORTED ONLY
+       inst_set1['LOCCTR'][i+1]=current_loc
+    #OPTIONAL FOR THE CASE OF FILE IMPORTED ONLY !!!
     for n in ['P', 'X', 'F', 'C']:
         del inst_set1[n]
     
@@ -134,8 +134,8 @@ for i in range(len(add_mode)):
 #Filling n,i,x,p,b,e,disp1,disp2,address columns
 def fill_address(inst_set):
     #for format 1,2 
-    inst_set['DISP1']=inst_set.apply(lambda row: row.e*0, axis = 1)
-    inst_set['DISP2']=inst_set.apply(lambda row: row.e*0, axis = 1)
+    inst_set['R1']=inst_set.apply(lambda row: row.e*0, axis = 1)
+    inst_set['R2']=inst_set.apply(lambda row: row.e*0, axis = 1)
     inst_set['ADD']=inst_set.apply(lambda row: row.e*0, axis = 1)
     
     #call symtab:
@@ -187,9 +187,9 @@ def fill_address(inst_set):
             
             for operand in inst_set['OPERAND'].split(','):
                 format_row=inst_set.loc(inst_set['REF']==operand)
-                inst_set['DISP1']=format_row[0]
+                inst_set['R1']=format_row[0]
                 if format_row[1]:
-                    inst_set['DISP2']=format_row[1]
+                    inst_set['R2']=format_row[1]
         
         #fill adds for formmats 3 and 4
         elif inst_set['FORMAT'][i] in [3,4]:
@@ -215,6 +215,10 @@ def fill_address(inst_set):
 #.............................................................................................
 def setToBinary(inst_set):
     inst_set['OPCODEVAL']=inst_set.apply(lambda row: int(row.OPCODEVAL,16), axis = 1)
+    inst_set['OPCODEVAL']=inst_set.apply(lambda row: format(row.OPCODEVAL,'08b') if row.FORMAT in [1,2] else format(row.OPCODEVAL,'06b'), axis = 1)
+    inst_set['ADD']=inst_set.apply(lambda row:format(row.ADD,'020b') if row.FORMAT==4 else format(row.ADD,'012b'), axis = 1)
+    inst_set['R1']=inst_set.apply(lambda row: format(row.R1,'04b'), axis = 1)
+    inst_set['R2']=inst_set.apply(lambda row: format(row.R2,'04b'), axis = 1)
     #inst_set['OPCODEVAL']=inst_set.to_numeric(inst_set['OPCODEVAL'])
     return inst_set
     
