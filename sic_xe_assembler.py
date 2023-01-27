@@ -132,11 +132,11 @@ for i in range(len(add_mode)):
         add_mode['AddMode'][i]=name
 #.......................................................................................        
 #Filling n,i,x,p,b,e,disp1,disp2,address columns
-def fill_address(inst_set):
+def fill_Taddress(inst_set):
     #for format 1,2 
     inst_set['R1']=inst_set.apply(lambda row: row.e*0, axis = 1)
     inst_set['R2']=inst_set.apply(lambda row: row.e*0, axis = 1)
-    inst_set['ADD']=inst_set.apply(lambda row: row.e*0, axis = 1)
+    inst_set['TADD']=inst_set.apply(lambda row: row.e*0, axis = 1)
     
     #call symtab:
     symtab=get_symtab(inst_set)
@@ -196,35 +196,58 @@ def fill_address(inst_set):
             operand=str(inst_set['OPERAND'][i])
             if operand in ['null']:
                 operand=0
-                inst_set['ADD'][i]=0
+                inst_set['TADD'][i]=0
             elif operand.isdigit() :
-                inst_set['ADD'][i]=int(str(operand))
+                inst_set['TADD'][i]=int(str(operand))
             else:
                 for j in range(len(symtab['REF'])):
                     if symtab['REF'][j] == operand:
-                        inst_set['ADD'][i]=symtab['LOCCTR'][j]
+                        inst_set['TADD'][i]=symtab['LOCCTR'][j]
     
     #handle p,b flags for formats 3 and 4
     
-    inst_set['p']=inst_set.apply(lambda row: int(row.ADD<2047 and row.ADD>-2048 and row.FORMAT==3), axis = 1)
-    inst_set['b']=inst_set.apply(lambda row: int(row.ADD<4095 and row.ADD>0 and row.FORMAT==3 and row.p==0), axis = 1)
-   
+    
+    
+    
     
     return inst_set
 
 #.............................................................................................
-def setToBinary(inst_set):
+def fixTAddress(inst_set):
     inst_set['OPCODEVAL']=inst_set.apply(lambda row: int(row.OPCODEVAL,16), axis = 1)
-    inst_set['OPCODEVAL']=inst_set.apply(lambda row: format(row.OPCODEVAL,'08b') if row.FORMAT in [1,2] else format(row.OPCODEVAL,'06b'), axis = 1)
-    inst_set['ADD']=inst_set.apply(lambda row:format(row.ADD,'020b') if row.FORMAT==4 else format(row.ADD,'012b'), axis = 1)
-    inst_set['R1']=inst_set.apply(lambda row: format(row.R1,'04b'), axis = 1)
-    inst_set['R2']=inst_set.apply(lambda row: format(row.R2,'04b'), axis = 1)
+    
+    #OPCODE in binary.......................................
+    #Discard the excessive right bits for formats 3,4 OPCODE
+    inst_set['OPCODEVAL']=inst_set.apply(lambda row: row.OPCODEVAL/4 if row.FORMAT in [3,4] and row.OPCODEVAL>63 else int(row.OPCODEVAL)/1, axis = 1)
+    
+    #OPCODE represented in 8 bits in formats 1,2 and in 6 bits for formats 3,4 OPCODE
+    inst_set['OPCODEVAL']=inst_set.apply(lambda row: format(int(row.OPCODEVAL),'08b') if row.FORMAT in [1,2] else format(int(row.OPCODEVAL),'06b'), axis = 1)
+
+    #calculate displacement -- Format 3
+    #  get PC column
+    inst_set['PC']=inst_set.apply(lambda x: 0, axis = 1)
+    for i in range(len(inst_set['LOCCTR'])-1):
+        inst_set['PC'][i]=inst_set['LOCCTR'][i+1]
+    #get BASE LOCCTR
+    BASE_loc=inst_set.loc[inst_set['OPCODE']=='BASE']['LOCCTR'].values[0]
+    #  get displacement handle p,b flags bits:
+    inst_set['TADD']=inst_set.apply(lambda x: x.TADD -( x.PC * int(x.FORMAT==3)), axis=1)
+    inst_set['p']=inst_set.apply(lambda row: int(row.TADD<2047 and row.TADD>-2048 and row.FORMAT==3), axis = 1)    
+    inst_set['TADD']=inst_set.apply(lambda x: x.TADD +( x.PC * int(x.FORMAT==3 and x.p==0))-BASE_loc, axis=1)
+    inst_set['b']=inst_set.apply(lambda row: int(row.p==0 and row.FORMAT==3), axis = 1)
+    
+    #inst_set['b']=inst_set.apply(lambda row: int(row.TADD<4095 and row.TADD>2047 and row.FORMAT==3 and row.p==0), axis = 1)
+   
+    #Represent Address in 20 bits -- format 4 
+    #inst_set['TADD']=inst_set.apply(lambda row:format(row.TADD,'020b') if row.FORMAT==4 else format(row.TADD,'012b'), axis = 1)
+    #inst_set['R1']=inst_set.apply(lambda row: format(row.R1,'04b'), axis = 1)
+    #inst_set['R2']=inst_set.apply(lambda row: format(row.R2,'04b'), axis = 1)
     #inst_set['OPCODEVAL']=inst_set.to_numeric(inst_set['OPCODEVAL'])
     return inst_set
     
 #.......................................................................................   
 print('\n add mode table \n',add_mode)
-print(add_mode['FLAGS'][1].split())
+
 
 print('--------------------------------------------------------------------------------------') 
 
@@ -232,12 +255,13 @@ print('-------------------------------------------------------------------------
 
 print("\n","Set of input instructions modified","\n")
 input_set1=createLocctr(input_set, sicxe_inst)
-input_set2=fill_address(input_set1)
-print(fill_address(input_set1))
+input_set2=fill_Taddress(input_set1)
+print(fill_Taddress(input_set1))
 
 print('Get sym-table\n')
 symtab=get_symtab(input_set1)
 print(symtab)
 print('to numeric data-------------------------------------------') 
-print(setToBinary(input_set2))
+fixTAddress(input_set2)
+print(fixTAddress(input_set2))
 #data['column'].apply(lambda element: format(int(element), 'b'))
