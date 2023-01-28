@@ -1,37 +1,15 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Jan 10 19:02:02 2023
-
-@author: ammar
-"""
 import math
 import pandas as pd
 import re
 from ast import literal_eval
 
-#------------------------------------------------------------------------------
-#read json file: A reference file of SIC/XE instructions:
+"""
+Created on Sat Jan 28 00:33:53 2023
 
-sicxe_inst = pd.read_json("inst.json")
-print("\n","Set of SIC/XE instructions reference","\n")
-print(sicxe_inst)
-print('------------------------------------------------------------') 
-  
-     
-# read txt file of instructions input:      
-
-
-input_set = pd.read_csv("test.txt", sep=".", header=None, names=["atts"], skiprows=0 ,skipinitialspace =True)
-input_set['REF'],input_set['OPCODE'],input_set['OPERAND'] = zip(*input_set['atts'].str.split())
-del input_set['atts']
-
-#print("\n","Set of input instructions imported from test.txt","\n")
-#print(input_set)
-
-
-#Merge sicxe_insts and input dataframes and add looctr col.-------------------------------
-
-
+@author: ammar
+"""
+#functions exported to sic_xe_assembler
 def createLocctr(inst_set,sicxe,firstloc=0):
     # Add column of + sign for format 4
     #trim + sign from opcode to be able to merge successfully 
@@ -172,7 +150,7 @@ def fill_Taddress(inst_set):
                     inst_set['OPERAND'][i]=inst_set['OPERAND'][i].replace(sign,'').replace(',','')
             
             #handle p,b ???  
-            
+            #fill address for formats 3/4:
         
         
                     
@@ -189,11 +167,11 @@ def fill_Taddress(inst_set):
         # handle format 2 and 1  and fill displacement columns:
         if inst_set['FORMAT'][i]==2:
             
-            for op in inst_set['OPERAND'].split(','):
-                operands=inst_set.loc(inst_set['REF']==op)
-                inst_set['R1']=operands[0]
-                if operands[1]:
-                    inst_set['R2']=operands[1]
+            for operand in inst_set['OPERAND'].split(','):
+                format_row=inst_set.loc(inst_set['REF']==operand)
+                inst_set['R1']=format_row[0]
+                if format_row[1]:
+                    inst_set['R2']=format_row[1]
         
         #fill adds for formmats 3 and 4
         elif inst_set['FORMAT'][i] in [3,4]:
@@ -232,55 +210,20 @@ def fixTAddress(inst_set):
     inst_set['PC']=inst_set.apply(lambda x: 0, axis = 1)
     for i in range(len(inst_set['LOCCTR'])-1):
         inst_set['PC'][i]=inst_set['LOCCTR'][i+1]
-    
     #get BASE LOCCTR
-    BASE_op=inst_set.loc[inst_set['OPCODE']=='BASE']['OPERAND'].values[0]
-    BASE_loc=inst_set.loc[inst_set['REF']==BASE_op]['LOCCTR'].values[0]
-    #print('>>>>>>>',BASE_op,'BASE_loc>>>>>>',BASE_loc)
-    
+    BASE_loc=inst_set.loc[inst_set['OPCODE']=='BASE']['LOCCTR'].values[0]
     #  get displacement handle p,b flags bits:
-    inst_set['TADD']=inst_set.apply(lambda x: x.TADD - x.PC if x.FORMAT==3 else x.TADD, axis=1)
-    inst_set['p']=inst_set.apply(lambda row:1 if row.TADD<2047 and row.TADD>-2048 and row.FORMAT==3 else 0, axis = 1)    
-    inst_set['TADD']=inst_set.apply(lambda x: x.TADD + x.PC -BASE_loc if (x.FORMAT==3 and x.p==0) else x.TADD , axis=1)
-    inst_set['b']=inst_set.apply(lambda row: 1 if row.p==0 and row.FORMAT==3 else 0, axis = 1)
+    inst_set['TADD']=inst_set.apply(lambda x: int(x.TADD) -( x.PC * int(x.FORMAT==3)), axis=1)
+    inst_set['p']=inst_set.apply(lambda row: int(row.TADD<2047 and row.TADD>-2048 and row.FORMAT==3), axis = 1)    
+    inst_set['TADD']=inst_set.apply(lambda x: x.TADD +( x.PC * int(x.FORMAT==3 and x.p==0))-BASE_loc, axis=1)
+    inst_set['b']=inst_set.apply(lambda row: int(row.p==0 and row.FORMAT==3), axis = 1)
     
-    #  handle negative displacements for binaries
-    inst_set['TADD']=inst_set.apply(lambda x: (-(x.TADD) + 4080) if (x.FORMAT==3 and x.TADD<0 and x.TADD>=-15) else x.TADD , axis=1)
-    inst_set['TADD']=inst_set.apply(lambda x: (-(x.TADD) + 3840) if (x.FORMAT==3 and x.TADD<0 and x.TADD>=-255) else x.TADD , axis=1)
-
-    
+    #inst_set['b']=inst_set.apply(lambda row: int(row.TADD<4095 and row.TADD>2047 and row.FORMAT==3 and row.p==0), axis = 1)
    
-    #Represent Disp/Address in  bits -- format3 , format 4 
-    inst_set['TADD']=inst_set.apply(lambda row:format(row.TADD,'08b') if row.FORMAT==4 else format(row.TADD,'012b'), axis = 1)
-    
-    #Represent R1 and R2 -- format 2
-    inst_set['R1']=inst_set.apply(lambda row: format(row.R1,'04b'), axis = 1)
-    inst_set['R2']=inst_set.apply(lambda row: format(row.R2,'04b'), axis = 1)
-    
+    #Represent Address in 20 bits -- format 4 
+    #inst_set['TADD']=inst_set.apply(lambda row:format(row.TADD,'08b') if row.FORMAT==4 else format(row.TADD,'012b'), axis = 1)
+    #inst_set['R1']=inst_set.apply(lambda row: format(row.R1,'04b'), axis = 1)
+    #inst_set['R2']=inst_set.apply(lambda row: format(row.R2,'04b'), axis = 1)
+    #inst_set['OPCODEVAL']=inst_set.to_numeric(inst_set['OPCODEVAL'])
     return inst_set
     
-
-
-
-
-#.......................................................................................   
-#print('\n add mode table \n',add_mode)
-
-
-print('--------------------------------------------------------------------------------------') 
-
-
-
-print("\n","Set of input instructions modified","\n")
-input_set1=createLocctr(input_set, sicxe_inst)
-input_set2=fill_Taddress(input_set1)
-print(fill_Taddress(input_set1))
-
-print('Get sym-table\n')
-symtab=get_symtab(input_set1)
-print(symtab)
-print('to numeric data-------------------------------------------') 
-
-input_set3=fixTAddress(input_set2)
-print(input_set3)
-#data['column'].apply(lambda element: format(int(element), 'b'))
